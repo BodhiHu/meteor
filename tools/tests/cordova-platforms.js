@@ -1,15 +1,14 @@
-var selftest = require('../selftest.js');
+var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
-var files = require('../files.js');
+var files = require('../fs/files.js');
 
-selftest.define("add cordova platforms", function () {
+selftest.define("add cordova platforms", ["cordova"], function () {
   var s = new Sandbox();
   var run;
 
   // Starting a run
   s.createApp("myapp", "package-tests");
   s.cd("myapp");
-  s.set("METEOR_TEST_TMP", files.mkdtemp());
 
   run = s.run("run", "android");
   run.matchErr("Please add the Android platform to your project first");
@@ -33,9 +32,11 @@ selftest.define("add cordova platforms", function () {
   run.write("Y\n");
   run.waitSecs(90); // Huge download
   run.match("added");
+  run.expectExit(0);
 
   run = s.run("remove-platform", "foo");
   run.matchErr("foo: platform is not");
+  run.expectExit(0);
 
   run = s.run("remove-platform", "android");
   run.match("removed");

@@ -12,8 +12,13 @@ The Meteor server stores passwords using the
 protect against embarrassing password leaks if the server's database is
 compromised.
 
-To add password support to your application, run `$ meteor add
-accounts-password`. You can construct your own user interface using the
+To add password support to your application, run this command in your terminal:
+
+```bash
+meteor add accounts-password
+```
+
+You can construct your own user interface using the
 functions below, or use the [`accounts-ui` package](#accountsui) to
 include a turn-key user interface for password-based sign-in.
 
@@ -26,7 +31,7 @@ id.
 
 On the client, you must pass `password` and at least one of `username` or
 `email` &mdash; enough information for the user to be able to log in again
-later. On the server, you do not need to specify `password`, but the user will
+later. If there are existing users with a username or email only differing in case, `createUser` will fail. On the server, you do not need to specify `password`, but the user will
 not be able to log in until it has a password (eg, set with
 [`Accounts.setPassword`](#accounts_setpassword)).
 
@@ -119,12 +124,16 @@ Override fields of the object by assigning to them:
    to set this to an email address that you can receive email at.
 - `siteName`: The public name of your application. Defaults to the DNS name of
    the application (eg: `awesome.meteor.com`).
-- `resetPassword`: An `Object` with two fields:
- - `resetPassword.subject`: A `Function` that takes a user object and returns
+- `headers`: An `Object` for custom email headers as described in
+    [`Email.send`](#email_send).
+- `resetPassword`: An `Object` with the fields:
+ - `from`: A `Function` used to override the `from` address defined
+   by the `emailTemplates.from` field.
+ - `subject`: A `Function` that takes a user object and returns
    a `String` for the subject line of a reset password email.
- - `resetPassword.text`: A `Function` that takes a user object and a url, and
+ - `text`: An optional `Function` that takes a user object and a url, and
    returns the body text for a reset password email.
- - `resetPassword.html`: An optional `Function` that takes a user object and a
+ - `html`: An optional `Function` that takes a user object and a
    url, and returns the body html for a reset password email.
 - `enrollAccount`: Same as `resetPassword`, but for initial password setup for
    new accounts.

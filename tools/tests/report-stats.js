@@ -1,19 +1,20 @@
 var _ = require('underscore');
-var os = require("os");
-var util = require("util");
+var os = require('os');
+var util = require('util');
 
-var auth = require("../auth.js");
-var files = require("../files.js");
-var config = require("../config.js");
-var release = require("../release.js");
-var selftest = require('../selftest.js');
-var testUtils = require('../test-utils.js');
-var stats = require('../stats.js');
+var auth = require('../meteor-services/auth.js');
+var files = require('../fs/files.js');
+var config = require('../meteor-services/config.js');
+var selftest = require('../tool-testing/selftest.js');
+var testUtils = require('../tool-testing/test-utils.js');
+var stats = require('../meteor-services/stats.js');
+var tropohouseModule = require('../packaging/tropohouse.js');
+var release = require('../packaging/release.js');
 var Sandbox = selftest.Sandbox;
 var projectContextModule = require('../project-context.js');
-var buildmessage = require('../buildmessage.js');
+var buildmessage = require('../utils/buildmessage.js');
 
-var testStatsServer = "https://test-package-stats.meteor.com";
+var testStatsServer = 'https://test-package-stats.meteor.com';
 process.env.METEOR_PACKAGE_STATS_SERVER_URL = testStatsServer;
 
 var clientAddress;
@@ -24,7 +25,7 @@ var clientAddress;
 // XXX I have not managed to get this test passing since introducing
 //     isopack-cache, though it seems to just be major server slowness
 //     and perhaps preexisting.
-selftest.define("report-stats", ["slow", "net"], function () {
+selftest.define('report-stats', ['slow', 'net'], function () {
   _.each(
     // If we are currently running from a checkout, then we run this
     // test twice (once in which the sandbox uses the current checkout,
@@ -52,9 +53,21 @@ selftest.define("report-stats", ["slow", "net"], function () {
       });
       s.cd("foo");
 
-      var projectContext = new projectContextModule.ProjectContext({
-        projectDir: s.cwd
-      });
+      var projectContextOptions = { projectDir: s.cwd };
+      if (useFakeRelease) {
+        // Make sure that our projectContext knows where the fake tropohouse is.
+        projectContextOptions.tropohouse =
+          new tropohouseModule.Tropohouse(s.warehouse);
+        // This ProjectContext shouldn't notice the packages in the checkout.
+        projectContextOptions.ignoreCheckoutPackages = true;
+        // It should use the stub official catalog.
+        projectContextOptions.officialCatalog = s.warehouseOfficialCatalog;
+        // It should be pinned to METEOR@v1.
+        projectContextOptions.releaseForConstraints =
+          s.warehouseOfficialCatalog.getReleaseVersion("METEOR", "v1");
+      }
+      var projectContext = new projectContextModule.ProjectContext(
+        projectContextOptions);
       selftest.doOrThrow(function () {
         projectContext.prepareProjectForBuild();
       });
@@ -92,11 +105,11 @@ selftest.define("report-stats", ["slow", "net"], function () {
       selftest.expectEqual(_.sortBy(usage.packages, "name"),
                            _.sortBy(stats.packageList(projectContext), "name"));
 
-      // Check that the direct dependency was recorded as such.
-      _.each(usage.packages, function (package) {
-        if (package.name === "local-package" &&
-            ! package.direct) {
-          selftest.fail("local-package is not marked as a direct dependency");
+      // Check that the direct and local dependency was recorded as such.
+      _.each(usage.packages, function (packageObj) {
+        if (packageObj.name === "local-package") {
+          selftest.expectTrue(packageObj.direct);
+          selftest.expectTrue(packageObj.local);
         }
       });
 

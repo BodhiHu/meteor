@@ -10,10 +10,10 @@ method of client collections.
 By default, every newly created Meteor app contains the `autopublish`
 package, which automatically publishes all available documents to every
 client. To exercise finer-grained control over what documents different
-clients receive, first remove `autopublish`:
+clients receive, first remove `autopublish`, in your terminal:
 
 ```
-$ meteor remove autopublish
+meteor remove autopublish
 ```
 
 Now you can use `Meteor.publish` and `Meteor.subscribe` to control what
@@ -69,9 +69,10 @@ server, the publish function is automatically rerun and the updated
 document collections are pushed to the subscribed client.
 
 The `onReady` callback is called with no arguments when the server has sent all
-of the initial data for the subsription. The `onError` callback is called with a
-[`Meteor.Error`](#meteor_error) if the subscription fails or is terminated by
-the server. <!-- XXX It would be better to have one Node-style callback -->
+of the initial data for the subscription. The `onStop` callback is when the
+subscription is terminated for any reason; it receives a
+[`Meteor.Error`](#meteor_error) if the subscription failed due to a server-side
+error.
 
 `Meteor.subscribe` returns a subscription handle, which is an object with the
 following methods:

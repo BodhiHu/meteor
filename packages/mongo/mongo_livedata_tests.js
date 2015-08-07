@@ -2067,20 +2067,21 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
                       {_id: 'bar', x: 1}]);
 
       coll.remove({});
+      ret = upsert(coll, useUpdate, {_id: 'traq'}, {x: 1});
 
-      ret = upsert(coll, useUpdate, {_id: 'traz'}, {x: 1});
       test.equal(ret.numberAffected, 1);
       var myId = ret.insertedId;
-      if (! useUpdate) {
-        test.isTrue(myId);
-        // upsert with entire document does NOT take _id from
-        // the query.
-        test.notEqual(myId, 'traz');
-      } else {
+      if (useUpdate) {
         myId = coll.findOne()._id;
       }
+      // Starting with Mongo 2.6, upsert with entire document takes _id from the
+      // query, so the above upsert actually does an insert with _id traq
+      // instead of a random _id.  Whenever we are using our simulated upsert,
+      // we have this behavior (whether running against Mongo 2.4 or 2.6).
+      // https://jira.mongodb.org/browse/SERVER-5289
+      test.equal(myId, 'traq');
       compareResults(test, useUpdate, coll.find().fetch(),
-                     [{x: 1, _id: myId}]);
+                     [{x: 1, _id: 'traq'}]);
 
       // this time, insert as _id 'traz'
       ret = upsert(coll, useUpdate, {_id: 'traz'}, {_id: 'traz', x: 2});
@@ -2088,7 +2089,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
       if (! useUpdate)
         test.equal(ret.insertedId, 'traz');
       compareResults(test, useUpdate, coll.find().fetch(),
-                     [{x: 1, _id: myId},
+                     [{x: 1, _id: 'traq'},
                       {x: 2, _id: 'traz'}]);
 
       // now update _id 'traz'
@@ -2096,7 +2097,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
       test.equal(ret.numberAffected, 1);
       test.isFalse(ret.insertedId);
       compareResults(test, useUpdate, coll.find().fetch(),
-                     [{x: 1, _id: myId},
+                     [{x: 1, _id: 'traq'},
                       {x: 3, _id: 'traz'}]);
 
       // now update, passing _id (which is ok as long as it's the same)
@@ -2104,7 +2105,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
       test.equal(ret.numberAffected, 1);
       test.isFalse(ret.insertedId);
       compareResults(test, useUpdate, coll.find().fetch(),
-                     [{x: 1, _id: myId},
+                     [{x: 1, _id: 'traq'},
                       {x: 4, _id: 'traz'}]);
 
     });
@@ -2764,9 +2765,20 @@ Meteor.isServer && Tinytest.add("mongo-livedata - oplog - transform", function (
 });
 
 
-Meteor.isServer && Tinytest.add("mongo-livedata - oplog - drop collection", function (test) {
+Meteor.isServer && Tinytest.add("mongo-livedata - oplog - drop collection/db", function (test) {
+  // This test uses a random database, so it can be dropped without affecting
+  // anything else.
+  var mongodbUri = Npm.require('mongodb-uri');
+  var parsedUri = mongodbUri.parse(process.env.MONGO_URL);
+  parsedUri.database = 'dropDB' + Random.id();
+  var driver = new MongoInternals.RemoteCollectionDriver(
+    mongodbUri.format(parsedUri), {
+      oplogUrl: process.env.MONGO_OPLOG_URL
+    }
+  );
+
   var collName = "dropCollection" + Random.id();
-  var coll = new Mongo.Collection(collName);
+  var coll = new Mongo.Collection(collName, { _driver: driver });
 
   var doc1Id = coll.insert({a: 'foo', c: 1});
   var doc2Id = coll.insert({b: 'bar'});
@@ -2823,7 +2835,16 @@ Meteor.isServer && Tinytest.add("mongo-livedata - oplog - drop collection", func
   test.length(output, 1);
   test.equal(output.shift(), ['added', doc4Id, {a: 'foo', c: 3}]);
 
+  // Now drop the database. Should remove all docs again.
+  runInFence(function () {
+    driver.mongo.dropDatabase();
+  });
+
+  test.length(output, 1);
+  test.equal(output.shift(), ['removed', doc4Id]);
+
   handle.stop();
+  driver.mongo.close();
 });
 
 var TestCustomType = function (head, tail) {
@@ -3072,3 +3093,55 @@ Meteor.isServer && testAsyncMulti("mongo-livedata - update with replace forbidde
     test.equal(c.findOne(id), { _id: id, foo2: "bar2" });
   }
 ]);
+
+Meteor.isServer && Tinytest.add(
+  "mongo-livedata - connection failure throws",
+  function (test) {
+    test.throws(function () {
+      new MongoInternals.Connection('mongodb://this-does-not-exist.test/asdf');
+    });
+  }
+);
+
+Meteor.isServer && Tinytest.add("mongo-livedata - npm modules", function (test) {
+  // Make sure the version number looks like a version number.
+  test.matches(MongoInternals.NpmModules.mongodb.version, /^1\.(\d+)\.(\d+)/);
+  test.equal(typeof(MongoInternals.NpmModules.mongodb.module), 'function');
+  test.equal(typeof(MongoInternals.NpmModules.mongodb.module.connect),
+             'function');
+  test.equal(typeof(MongoInternals.NpmModules.mongodb.module.ObjectID),
+             'function');
+
+  var c = new Mongo.Collection(Random.id());
+  var rawCollection = c.rawCollection();
+  test.isTrue(rawCollection);
+  test.isTrue(rawCollection.findAndModify);
+  var rawDb = c.rawDatabase();
+  test.isTrue(rawDb);
+  test.isTrue(rawDb.admin);
+});
+
+if (Meteor.isServer) {
+  Tinytest.add("mongo-livedata - update/remove don't accept an array as a selector #4804", function (test) {
+    var collection = new Mongo.Collection(Random.id());
+
+    _.times(10, function () {
+      collection.insert({ data: "Hello" });
+    });
+
+    test.equal(collection.find().count(), 10);
+
+    // Test several array-related selectors
+    _.each([[], [1, 2, 3], [{}]], function (selector) {
+      test.throws(function () {
+        collection.remove(selector);
+      });
+
+      test.throws(function () {
+        collection.update(selector, {$set: 5});
+      });
+    });
+    
+    test.equal(collection.find().count(), 10);
+  });
+}

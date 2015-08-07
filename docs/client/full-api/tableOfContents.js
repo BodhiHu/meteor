@@ -40,7 +40,8 @@ var toc = [
         {instance: "this", name: "stop", id: "publish_stop"},
         {instance: "this", name: "connection", id: "publish_connection"}
       ],
-      "Meteor.subscribe"
+      "Meteor.subscribe",
+      {name: "DDPRateLimiter", id: "ddpratelimiter"}
     ],
 
     {name: "Methods", id: "methods_header"}, [
@@ -53,7 +54,8 @@ var toc = [
       ],
       "Meteor.Error",
       "Meteor.call",
-      "Meteor.apply"
+      "Meteor.apply",
+      {name: "DDPRateLimiter", id: "ddpratelimiter"}
     ],
 
     {name: "Check", id: "check_package"}, [
@@ -79,7 +81,11 @@ var toc = [
         {instance: "collection", name: "upsert"},
         {instance: "collection", name: "remove"},
         {instance: "collection", name: "allow"},
-        {instance: "collection", name: "deny"}
+        {instance: "collection", name: "deny"},
+        {instance: "collection", name: "rawCollection",
+         id: "Mongo-Collection-rawCollection"},
+        {instance: "collection", name: "rawDatabase",
+         id: "Mongo-Collection-rawDatabase"}
       ],
 
       "Mongo.Cursor", [
@@ -156,9 +162,9 @@ var toc = [
       {prefix: "Template", instance: "myTemplate", id: "templates_api"}, [
         {name: "events", id: "template_events"},
         {name: "helpers", id: "template_helpers"},
-        {name: "rendered", id: "template_rendered"},
-        {name: "created", id: "template_created"},
-        {name: "destroyed", id: "template_destroyed"}
+        {name: "onRendered", id: "template_onRendered"},
+        {name: "onCreated", id: "template_onCreated"},
+        {name: "onDestroyed", id: "template_onDestroyed"}
       ],
       {name: "Template instances", id: "template_inst"}, [
         {instance: "template", name: "findAll", id: "template_findAll"},
@@ -168,6 +174,7 @@ var toc = [
         {instance: "template", name: "lastNode", id: "template_lastNode"},
         {instance: "template", name: "data", id: "template_data"},
         {instance: "template", name: "autorun", id: "template_autorun"},
+        {instance: "template", name: "subscribe", id: "Blaze-TemplateInstance-subscribe"},
         {instance: "template", name: "view", id: "template_view"}
       ],
       "Template.registerHelper",
@@ -177,7 +184,8 @@ var toc = [
       "Template.body",
       {name: "{{> Template.dynamic}}", id: "template_dynamic"},
       {type: "spacer"},
-      {name: "Event maps", style: "noncode"}
+      {name: "Event maps", style: "noncode"},
+      {name: "Spacebars", style: "noncode"}
     ],
     "Blaze", [
       "Blaze.render",
@@ -219,6 +227,7 @@ var toc = [
         {instance: "computation", name: "stop", id: "computation_stop"},
         {instance: "computation", name: "invalidate", id: "computation_invalidate"},
         {instance: "computation", name: "onInvalidate", id: "computation_oninvalidate"},
+        {instance: "computation", name: "onStop", id: "computation_onstop"},
         {instance: "computation", name: "stopped", id: "computation_stopped"},
         {instance: "computation", name: "invalidated", id: "computation_invalidated"},
         {instance: "computation", name: "firstRun", id: "computation_firstrun"}
@@ -299,6 +308,7 @@ var toc = [
     {name: "mobile-config.js", id: "mobileconfigjs"}, [
       {name: "App.info", id: "App-info"},
       {name: "App.setPreference", id: "App-setPreference"},
+      {name: "App.accessRule", id: "App-accessRule"},
       {name: "App.configurePlugin", id: "App-configurePlugin"},
       {name: "App.icons", id: "App-icons"},
       {name: "App.launchScreens", id: "App-launchScreens"}
@@ -315,9 +325,7 @@ var toc = [
     "markdown",
     "oauth-encryption",
     "random",
-    "showdown",
     {name: "spiderable", link: "https://atmospherejs.com/meteor/spiderable"},
-    "stylus",
     "underscore",
     "webapp"
   ] ],
@@ -325,6 +333,7 @@ var toc = [
   "Command line", [ [
     "meteor help",
     "meteor run",
+    "meteor debug",
     "meteor create",
     "meteor deploy",
     "meteor logs",
@@ -335,6 +344,7 @@ var toc = [
     "meteor mongo",
     "meteor reset",
     "meteor build",
+    "meteor lint",
     "meteor search",
     "meteor show",
     "meteor publish",

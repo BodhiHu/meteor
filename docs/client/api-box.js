@@ -54,12 +54,13 @@ var typeNameTranslation = {
   "Blaze.View": typeLink("Blaze.View", "#blaze_view"),
   Template: typeLink("Blaze.Template", "#blaze_template"),
   DOMElement: typeLink("DOM Element", "https://developer.mozilla.org/en-US/docs/Web/API/element"),
-  MatchPattern: typeLink("Match Pattern", "#matchpatterns")
+  MatchPattern: typeLink("Match Pattern", "#matchpatterns"),
+  "DDP.Connection": typeLink("DDP Connection", "#ddp_connect")
 };
 
 Template.autoApiBox.helpers({
   apiData: apiData,
-  typeNames: function (nameList) {
+  typeNames: function typeNames (nameList) {
     // change names if necessary
     nameList = _.map(nameList, function (name) {
       // decode the "Array.<Type>" syntax
@@ -81,6 +82,10 @@ Template.autoApiBox.helpers({
 
       if (typeNameTranslation.hasOwnProperty(name)) {
         return typeNameTranslation[name];
+      }
+
+      if (DocsData[name]) {
+        return typeNames(DocsData[name].type);
       }
 
       return name;
@@ -162,6 +167,9 @@ Template.autoApiBox.helpers({
     return _.reject(this.params, function (param) {
       return param.name === "options";
     });
+  },
+  fullApi: function () {
+    return Session.get("fullApi");
   }
 });
 
@@ -171,9 +179,9 @@ Template.apiBoxTitle.helpers({
   }
 });
 
-Template.autoApiBox.rendered = function () {
+Template.autoApiBox.onRendered(function () {
   this.$('pre code').each(function(i, block) {
     hljs.highlightBlock(block);
   });
-};
+});
 

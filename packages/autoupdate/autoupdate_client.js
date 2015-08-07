@@ -41,6 +41,7 @@ Autoupdate.newClientAvailable = function () {
                _id: "version-refreshable",
                version: {$ne: autoupdateVersionRefreshable} });
 };
+Autoupdate._ClientVersions = ClientVersions;  // Used by a self-test
 
 var knownToSupportCssOnLoad = false;
 
@@ -127,10 +128,7 @@ Autoupdate._retrySubscription = function () {
                 newLink.setAttribute("rel", "stylesheet");
                 newLink.setAttribute("type", "text/css");
                 newLink.setAttribute("class", "__meteor-css__");
-                newLink.setAttribute(
-                  "href",
-                  (__meteor_runtime_config__.ROOT_URL_PATH_PREFIX || "")
-                    + css.url);
+                newLink.setAttribute("href", Meteor._relativeToSiteRootUrl(css.url));
                 attachStylesheetLink(newLink);
               });
             } else {
@@ -140,7 +138,10 @@ Autoupdate._retrySubscription = function () {
           }
           else if (doc._id === 'version' && doc.version !== autoupdateVersion) {
             handle && handle.stop();
-            Package.reload.Reload._reload();
+
+            if (Package.reload) {
+              Package.reload.Reload._reload();
+            }
           }
         };
 

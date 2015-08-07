@@ -1,5 +1,5 @@
-var selftest = require('../selftest.js');
-var utils = require('../utils.js');
+var selftest = require('../tool-testing/selftest.js');
+var utils = require('../utils/utils.js');
 
 selftest.define('subset generator', function () {
   var out = [];
@@ -126,7 +126,7 @@ selftest.define("parse url", function () {
   });
 });
 
-selftest.define('get mobile server argument for meteor run', function () {
+selftest.define('get mobile server argument for meteor run', ['cordova'], function () {
   // on emulator
 
   // meteor run -p 3000

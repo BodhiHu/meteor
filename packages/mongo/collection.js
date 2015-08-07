@@ -103,6 +103,7 @@ Mongo.Collection = function (name, options) {
 
   self._collection = options._driver.open(name, self._connection);
   self._name = name;
+  self._driver = options._driver;
 
   if (self._connection && self._connection.registerStore) {
     // OK, we're going to be a slave, replicating some remote
@@ -135,7 +136,7 @@ Mongo.Collection = function (name, options) {
       // Apply an update.
       // XXX better specify this interface (not in terms of a wire message)?
       update: function (msg) {
-        var mongoId = LocalCollection._idParse(msg.id);
+        var mongoId = MongoID.idParse(msg.id);
         var doc = self._collection.findOne(mongoId);
 
         // Is this a "replace the whole doc" message coming from the quiescence
@@ -327,6 +328,12 @@ Mongo.Collection._rewriteSelector = function (selector) {
   if (LocalCollection._selectorIsId(selector))
     selector = {_id: selector};
 
+  if (_.isArray(selector)) {
+    // This is consistent with the Mongo console itself; if we don't do this
+    // check passing an empty array ends up selecting all items
+    throw new Error("Mongo selector can't be an array.");
+  }
+
   if (!selector || (('_id' in selector) && !selector._id))
     // can't match anything
     return {_id: Random.id()};
@@ -502,7 +509,7 @@ _.each(["insert", "update", "remove"], function (name) {
             if (!(typeof options.insertedId === 'string'
                   || options.insertedId instanceof Mongo.ObjectID))
               throw new Error("insertedId must be string or ObjectID");
-          } else {
+          } else if (! args[0]._id) {
             options.insertedId = self._makeNewID();
           }
         }
@@ -638,12 +645,37 @@ Mongo.Collection.prototype._createCappedCollection = function (byteSize, maxDocu
 };
 
 /**
+ * @summary Returns the [`Collection`](http://mongodb.github.io/node-mongodb-native/1.4/api-generated/collection.html) object corresponding to this collection from the [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
+ * @locus Server
+ */
+Mongo.Collection.prototype.rawCollection = function () {
+  var self = this;
+  if (! self._collection.rawCollection) {
+    throw new Error("Can only call rawCollection on server collections");
+  }
+  return self._collection.rawCollection();
+};
+
+/**
+ * @summary Returns the [`Db`](http://mongodb.github.io/node-mongodb-native/1.4/api-generated/db.html) object corresponding to this collection's database connection from the [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
+ * @locus Server
+ */
+Mongo.Collection.prototype.rawDatabase = function () {
+  var self = this;
+  if (! (self._driver.mongo && self._driver.mongo.db)) {
+    throw new Error("Can only call rawDatabase on server collections");
+  }
+  return self._driver.mongo.db;
+};
+
+
+/**
  * @summary Create a Mongo-style `ObjectID`.  If you don't specify a `hexString`, the `ObjectID` will generated randomly (not using MongoDB's ID construction rules).
  * @locus Anywhere
  * @class
  * @param {String} hexString Optional.  The 24-character hexadecimal contents of the ObjectID to create
  */
-Mongo.ObjectID = LocalCollection._ObjectID;
+Mongo.ObjectID = MongoID.ObjectID;
 
 /**
  * @summary To create a cursor, use find. To access the documents in a cursor, use forEach, map, or fetch.
@@ -1020,13 +1052,10 @@ Mongo.Collection.prototype._validatedUpdate = function(
   if (!doc)  // none satisfied!
     return 0;
 
-  var factoriedDoc;
-
   // call user validators.
   // Any deny returns true means denied.
   if (_.any(self._validators.update.deny, function(validator) {
-    if (!factoriedDoc)
-      factoriedDoc = transformDoc(validator, doc);
+    var factoriedDoc = transformDoc(validator, doc);
     return validator(userId,
                      factoriedDoc,
                      fields,
@@ -1036,8 +1065,7 @@ Mongo.Collection.prototype._validatedUpdate = function(
   }
   // Any allow returns true means proceed. Throw error if they all fail.
   if (_.all(self._validators.update.allow, function(validator) {
-    if (!factoriedDoc)
-      factoriedDoc = transformDoc(validator, doc);
+    var factoriedDoc = transformDoc(validator, doc);
     return !validator(userId,
                       factoriedDoc,
                       fields,

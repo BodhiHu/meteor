@@ -1,9 +1,9 @@
 var _ = require('underscore');
-var selftest = require('../selftest.js');
-var httpHelpers = require('../http-helpers.js');
+var selftest = require('../tool-testing/selftest.js');
+var httpHelpers = require('../utils/http-helpers.js');
 var Sandbox = selftest.Sandbox;
-var testUtils = require("../test-utils.js");
-var config = require("../config.js");
+var testUtils = require('../tool-testing/test-utils.js');
+var config = require('../meteor-services/config.js');
 
 // This is not an end-to-end test for Cordova hot code push, but this test
 // is for the issue that we observed where the value of the
@@ -13,7 +13,7 @@ var config = require("../config.js");
 // it receives a hot code push, it would be connected to whatever
 // ROOT_URL is on the server.
 selftest.define(
-  "cordova --mobile-server argument persists across hot code pushes", function () {
+  "cordova --mobile-server argument persists across hot code pushes", ["cordova"], function () {
     var s = new Sandbox();
     var run;
 
@@ -33,19 +33,14 @@ selftest.define(
     var result = httpHelpers.getUrl(
       "http://localhost:3000/__cordova/index.html");
 
-    var ddpRegExp = /"DDP_DEFAULT_CONNECTION_URL":"http:\/\/example.com"/;
-    var rootUrlRegExp = /"ROOT_URL":"http:\/\/example.com"/;
-    if (! result.match(ddpRegExp)) {
-      selftest.fail("Incorrect DDP_DEFAULT_CONNECTION_URL");
-    }
-    if (! result.match(rootUrlRegExp)) {
-      selftest.fail("Incorrect ROOT_URL");
-    }
+    var mrc = testUtils.getMeteorRuntimeConfigFromHTML(result);
+    selftest.expectEqual(mrc.DDP_DEFAULT_CONNECTION_URL, "http://example.com");
+    selftest.expectEqual(mrc.ROOT_URL, "http://example.com");
 
     run.stop();
 });
 
-selftest.define("cordova app gets https:// URLs when force-ssl is used", ["net", "slow"], function () {
+selftest.define("cordova app gets https:// URLs when force-ssl is used", ["cordova", "net", "slow"], function () {
   var s = new Sandbox();
   var run;
 
@@ -79,13 +74,7 @@ selftest.define("cordova app gets https:// URLs when force-ssl is used", ["net",
 
   testUtils.logout(s);
 
-  var ddpRegExp = new RegExp('"DDP_DEFAULT_CONNECTION_URL":"' + url + '/"');
-  var rootUrlRegExp = new RegExp('"ROOT_URL":"' + url + '/"');
-
-  if (! result.match(ddpRegExp)) {
-    selftest.fail("Incorrect DDP_DEFAULT_CONNECTION_URL");
-  }
-  if (! result.match(rootUrlRegExp)) {
-    selftest.fail("Incorrect ROOT_URL");
-  }
+  var mrc = testUtils.getMeteorRuntimeConfigFromHTML(result);
+  selftest.expectEqual(mrc.DDP_DEFAULT_CONNECTION_URL, url + "/");
+  selftest.expectEqual(mrc.ROOT_URL, url + "/");
 });

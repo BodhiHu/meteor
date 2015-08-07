@@ -6,8 +6,10 @@
 
 # Packages from the release:
 meteor-platform
+standard-minifiers
 less
 email
+http
 jquery-waypoints
 fastclick
 accounts-twitter
@@ -22,6 +24,3 @@ percolate:velocityjs
 percolate:wireframing
 mdg:camera
 mdg:geolocation
-
-# Packages from the app:
-request

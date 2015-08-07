@@ -6,7 +6,7 @@ To get accounts functionality, add one or more of the following packages to
 your app with `meteor add`:
 
 - `accounts-ui`: This package allows you to use
-  `{{dstache}}> `loginButtons}}` in your templates to add an automatically
+  `{{dstache}}> loginButtons}}` in your templates to add an automatically
   generated UI that will let users log into your app. There are several
   community alternatives to this package that change the appearance, or you
   can not use it and use the [advanced Accounts methods](#accounts) instead.
@@ -24,10 +24,11 @@ your app with `meteor add`:
 </h3>
 
 Include the `loginButtons` template somewhere in your HTML to use Meteor's
-default UI for logging in. To use this, you need to add the `accounts-ui` package:
+default UI for logging in. To use this, you need to add the `accounts-ui` package,
+in your terminal:
 
 ```
-$ meteor add accounts-ui
+meteor add accounts-ui
 ```
 
 {{> autoApiBox "Meteor.user"}}
